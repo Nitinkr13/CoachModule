@@ -1,0 +1,8 @@
+
+{
+  "name": "Gemini Voice Trainer",
+  "description": "A conversational AI training assistant that uses the Gemini Live API to conduct interactive Q&A sessions based on your documents and provides real-time feedback.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

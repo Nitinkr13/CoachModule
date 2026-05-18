@@ -1,0 +1,13 @@
+iLead module 1 Personas for Sahayak.docx
+iLead_IGNITE V3_Updated Probing (2).pdf
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
