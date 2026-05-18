@@ -290,12 +290,12 @@ const LiveConversation: React.FC<LiveConversationProps> = ({ config, onEnd }) =>
         <div className="flex items-center gap-4">
           <div className="relative">
             <div className="w-10 h-10 bg-indigo-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
-              {config.role.charAt(0).toUpperCase()}
+              {config.personaName.charAt(0).toUpperCase()}
             </div>
             <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-slate-900 rounded-full"></div>
           </div>
           <div>
-            <h3 className="font-bold text-lg leading-tight">{config.role}</h3>
+            <h3 className="font-bold text-lg leading-tight">{config.personaName}</h3>
             <p className="text-xs text-slate-400 font-medium tracking-wide uppercase">Active Session</p>
           </div>
         </div>

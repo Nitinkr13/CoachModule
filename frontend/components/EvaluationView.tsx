@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { TranscriptionItem, TrainingSessionConfig } from '../types';
+import { EvaluationRubricItem, TranscriptionItem, TrainingSessionConfig } from '../types';
 import { marked } from 'marked';
 
 interface EvaluationViewProps {
@@ -11,6 +11,8 @@ interface EvaluationViewProps {
 
 const EvaluationView: React.FC<EvaluationViewProps> = ({ history, config, onReset }) => {
   const [feedbackHtml, setFeedbackHtml] = useState<string>('');
+  const [rubric, setRubric] = useState<EvaluationRubricItem[]>([]);
+  const [overallScore, setOverallScore] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,8 +37,12 @@ const EvaluationView: React.FC<EvaluationViewProps> = ({ history, config, onRese
 
         const data = await response.json();
         const rawText = data.feedback || "Failed to generate feedback.";
+        const rubricItems = (data.rubric || []) as EvaluationRubricItem[];
+        const scoreValue = typeof data.score === 'number' ? data.score : null;
         const html = await marked.parse(rawText);
         setFeedbackHtml(html);
+        setRubric(rubricItems);
+        setOverallScore(scoreValue);
       } catch (err) {
         console.error(err);
         setFeedbackHtml("<p>Error generating feedback. Please check your connection.</p>");
@@ -54,7 +60,8 @@ const EvaluationView: React.FC<EvaluationViewProps> = ({ history, config, onRese
       <div className="flex items-center justify-between mb-12 border-b pb-8">
         <div>
           <h2 className="text-4xl font-extrabold text-slate-900 mb-2">Performance Report</h2>
-          <p className="text-slate-500 font-medium">Character Session: <span className="text-indigo-600">{config.role}</span></p>
+          <p className="text-slate-500 font-medium">Persona Session: <span className="text-indigo-600">{config.personaName}</span></p>
+          <p className="text-slate-400 text-sm">Scenario: {config.scenarioName}</p>
         </div>
         <button
           onClick={onReset}
@@ -83,10 +90,30 @@ const EvaluationView: React.FC<EvaluationViewProps> = ({ history, config, onRese
           <div className="h-40 bg-slate-50 rounded-2xl mt-8"></div>
         </div>
       ) : (
-        <div 
-          className="prose prose-slate max-w-none prose-headings:text-slate-900 prose-strong:text-indigo-600"
-          dangerouslySetInnerHTML={{ __html: feedbackHtml }}
-        />
+        <div className="space-y-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-5 rounded-2xl border border-slate-100 bg-slate-50">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Overall score</p>
+              <p className="text-3xl font-extrabold text-slate-900 mt-2">
+                {overallScore !== null ? overallScore : 'N/A'}
+              </p>
+            </div>
+            {rubric.map((item) => (
+              <div key={item.id} className="p-5 rounded-2xl border border-slate-100 bg-white">
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{item.label}</p>
+                <p className="text-2xl font-bold text-slate-900 mt-2">{item.score}</p>
+                {item.notes && (
+                  <p className="text-sm text-slate-500 mt-2">{item.notes}</p>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div 
+            className="prose prose-slate max-w-none prose-headings:text-slate-900 prose-strong:text-indigo-600"
+            dangerouslySetInnerHTML={{ __html: feedbackHtml }}
+          />
+        </div>
       )}
 
       <div className="mt-16 pt-10 border-t border-slate-100 flex flex-col md:flex-row items-center gap-6">

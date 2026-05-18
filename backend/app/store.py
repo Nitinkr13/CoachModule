@@ -19,9 +19,13 @@ class StoredDocument:
 @dataclass
 class SessionData:
     id: str
-    role: str
-    document: StoredDocument
+    persona_id: str
+    persona_name: str
+    scenario_id: str
+    scenario_name: str
+    evaluation_id: str
     system_prompt: str
+    document: StoredDocument | None = None
     history: List[EvaluationTurn] = field(default_factory=list)
 
 
@@ -71,13 +75,25 @@ def create_uploaded_document(name: str, text: str) -> StoredDocument:
     return document
 
 
-def create_session(role: str, document: StoredDocument, system_prompt: str) -> SessionData:
+def create_session(
+    persona_id: str,
+    persona_name: str,
+    scenario_id: str,
+    scenario_name: str,
+    evaluation_id: str,
+    system_prompt: str,
+    document: StoredDocument | None = None,
+) -> SessionData:
     session_id = uuid4().hex
     session = SessionData(
         id=session_id,
-        role=role,
-        document=document,
+        persona_id=persona_id,
+        persona_name=persona_name,
+        scenario_id=scenario_id,
+        scenario_name=scenario_name,
+        evaluation_id=evaluation_id,
         system_prompt=system_prompt,
+        document=document,
     )
     _SESSIONS[session_id] = session
     return session

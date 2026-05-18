@@ -14,7 +14,8 @@ from app.store import (
 from configs.loader import load_text
 from engines.conversation_engine import generate_reply
 from engines.evaluation_engine import evaluate_session
-from engines.prompt_engine import build_live_system_prompt
+from engines.prompt_engine import build_simulation_prompt
+from engines.simulation_engine import list_personas, resolve_simulation
 from models.schemas import (
     ConversationRequest,
     ConversationResponse,
@@ -23,7 +24,11 @@ from models.schemas import (
     DocumentsResponse,
     EvaluationRequest,
     EvaluationResponse,
+    EvaluationRubricItem,
     HealthResponse,
+    PersonaSummary,
+    PersonasResponse,
+    ScenarioSummary,
     SessionStartRequest,
     SessionStartResponse,
 )
@@ -65,6 +70,22 @@ def documents() -> DocumentsResponse:
     return DocumentsResponse(documents=docs)
 
 
+@router.get("/personas", response_model=PersonasResponse)
+def personas() -> PersonasResponse:
+    items = [
+        PersonaSummary(
+            id=persona.id,
+            name=persona.name,
+            description=persona.description,
+            behavior=persona.behavior,
+            cmTreatment=persona.cm_treatment,
+            impact=persona.impact,
+        )
+        for persona in list_personas()
+    ]
+    return PersonasResponse(personas=items)
+
+
 @router.post("/documents/upload", response_model=DocumentUploadResponse)
 async def upload_document(file: UploadFile = File(...)) -> DocumentUploadResponse:
     filename = file.filename or "document.txt"
@@ -96,40 +117,60 @@ async def upload_document(file: UploadFile = File(...)) -> DocumentUploadRespons
 
 @router.post("/session/start", response_model=SessionStartResponse)
 def session_start(payload: SessionStartRequest) -> SessionStartResponse:
-    document = get_document(payload.documentId)
-    if not document:
-        raise HTTPException(status_code=404, detail="Document not found.")
+    try:
+        context = resolve_simulation(payload.personaId, payload.scenarioId)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    template = load_text("templates", "live_session")
-    system_prompt = build_live_system_prompt(payload.role, document.text, template)
-    session = create_session(payload.role, document, system_prompt)
+    template = load_text("templates", context.scenario.template_id)
+    system_prompt = build_simulation_prompt(context.persona, context.scenario, template)
+    session = create_session(
+        persona_id=context.persona.id,
+        persona_name=context.persona.name,
+        scenario_id=context.scenario.id,
+        scenario_name=context.scenario.name,
+        evaluation_id=context.evaluation.id,
+        system_prompt=system_prompt,
+    )
 
     return SessionStartResponse(
         sessionId=session.id,
-        document=DocumentSummary(
-            id=document.id,
-            name=document.name,
-            source=document.source,
+        persona=PersonaSummary(
+            id=context.persona.id,
+            name=context.persona.name,
+            description=context.persona.description,
+            behavior=context.persona.behavior,
+            cmTreatment=context.persona.cm_treatment,
+            impact=context.persona.impact,
+        ),
+        scenario=ScenarioSummary(
+            id=context.scenario.id,
+            name=context.scenario.name,
+            goal=context.scenario.goal,
         ),
     )
 
 
 @router.post("/evaluation", response_model=EvaluationResponse)
 def evaluation(payload: EvaluationRequest) -> EvaluationResponse:
-    role = payload.role or "Unknown"
-    file_name = payload.fileName or "Unknown"
     history = payload.history
+    context = None
 
     if payload.sessionId:
         session = get_session(payload.sessionId)
         if not session:
             raise HTTPException(status_code=404, detail="Session not found.")
-        role = session.role
-        file_name = session.document.name
         history = session.history
+        try:
+            context = resolve_simulation(session.persona_id, session.scenario_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    if not context:
+        raise HTTPException(status_code=400, detail="Missing sessionId for evaluation.")
 
     try:
-        result = evaluate_session(role, file_name, history)
+        result = evaluate_session(context.persona, context.scenario, context.evaluation, history)
     except RuntimeError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -137,4 +178,13 @@ def evaluation(payload: EvaluationRequest) -> EvaluationResponse:
         score=result.score,
         summary=result.summary,
         feedback=result.report_markdown,
+        rubric=[
+            EvaluationRubricItem(
+                id=item.id,
+                label=item.label,
+                score=item.score,
+                notes=item.notes,
+            )
+            for item in result.rubric
+        ],
     )

@@ -1,8 +1,40 @@
 {
-  "id": "default",
+  "id": "cm_rm_default",
+  "name": "CM coaching rubric",
+  "scale": {
+    "min": 1,
+    "max": 5,
+    "labels": {
+      "1": "Needs work",
+      "3": "Meets expectations",
+      "5": "Excellent"
+    }
+  },
   "criteria": [
-    "Clarity",
-    "Accuracy",
-    "Empathy"
+    {
+      "id": "connection",
+      "label": "Connection and respect",
+      "description": "Acknowledges RM performance and builds trust before redirecting."
+    },
+    {
+      "id": "diagnosis",
+      "label": "Diagnosis and clarity",
+      "description": "Clearly identifies gaps in routines or alignment with evidence."
+    },
+    {
+      "id": "coaching_structure",
+      "label": "Coaching structure (SBI or RUSH)",
+      "description": "Uses a structured coaching approach aligned to the persona's needs."
+    },
+    {
+      "id": "alignment",
+      "label": "Branch alignment focus",
+      "description": "Highlights the importance of LG and branch stakeholder involvement."
+    },
+    {
+      "id": "next_steps",
+      "label": "Commitment and next steps",
+      "description": "Secures clear commitments, timelines, or routines for follow-up."
+    }
   ]
 }

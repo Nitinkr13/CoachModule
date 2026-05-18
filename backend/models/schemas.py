@@ -29,6 +29,25 @@ class DocumentUploadResponse(BaseModel):
     document: DocumentSummary
 
 
+class PersonaSummary(BaseModel):
+    id: str
+    name: str
+    description: str
+    behavior: str
+    cmTreatment: str
+    impact: str
+
+
+class PersonasResponse(BaseModel):
+    personas: List[PersonaSummary]
+
+
+class ScenarioSummary(BaseModel):
+    id: str
+    name: str
+    goal: str
+
+
 class EvaluationTurn(BaseModel):
     speaker: str
     text: str
@@ -36,22 +55,29 @@ class EvaluationTurn(BaseModel):
 
 class EvaluationRequest(BaseModel):
     sessionId: Optional[str] = None
-    role: Optional[str] = None
-    fileName: Optional[str] = None
     history: List[EvaluationTurn] = Field(default_factory=list)
+
+
+class EvaluationRubricItem(BaseModel):
+    id: str
+    label: str
+    score: int
+    notes: str
 
 
 class EvaluationResponse(BaseModel):
     score: int
     summary: str
     feedback: str
+    rubric: List[EvaluationRubricItem] = Field(default_factory=list)
 
 
 class SessionStartRequest(BaseModel):
-    role: str
-    documentId: str
+    personaId: str
+    scenarioId: Optional[str] = None
 
 
 class SessionStartResponse(BaseModel):
     sessionId: str
-    document: DocumentSummary
+    persona: PersonaSummary
+    scenario: ScenarioSummary

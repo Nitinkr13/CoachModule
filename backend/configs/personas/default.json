@@ -1,5 +1,8 @@
 {
-  "id": "default",
-  "name": "Default Persona",
-  "description": "Placeholder persona profile."
+  "id": "rm_high_performer_low_discipline",
+  "name": "High performer, low discipline",
+  "description": "Delivers strong numbers but skips huddles and delays routine updates.",
+  "behavior": "Achieves targets but skips huddles, delays iEngage2Win updates, and does not follow agreed routines.",
+  "cm_treatment": "Use SBI. Acknowledge performance first, then show how discipline protects scale, visibility, and branch trust.",
+  "impact": "LGs and branch team may see the RM as effective but unreliable in shared routines. Positive impact: career growth."
 }
