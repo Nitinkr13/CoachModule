@@ -1,32 +1,58 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { TrainingSessionConfig } from '../types';
-import { readFileAsText } from '../utils/pdf';
+import React, { useEffect, useState } from 'react';
+import { DocumentSummary, TrainingSessionConfig } from '../types';
  
 interface SetupFormProps {
   onStart: (config: TrainingSessionConfig) => void;
 }
  
-const presetModules = import.meta.glob('../docs/*.txt', { as: 'raw', eager: true });
- 
 const SetupForm: React.FC<SetupFormProps> = ({ onStart }) => {
   const [role, setRole] = useState('');
   const [file, setFile] = useState<File | null>(null);
-  const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
+  const [selectedDocumentId, setSelectedDocumentId] = useState('');
+  const [documents, setDocuments] = useState<DocumentSummary[]>([]);
+  const [documentsError, setDocumentsError] = useState('');
+  const [loadingDocuments, setLoadingDocuments] = useState(true);
   const [loading, setLoading] = useState(false);
   const [micPermission, setMicPermission] = useState<'prompt' | 'granted' | 'denied'>('prompt');
- 
-  const presetFiles = useMemo(() => {
-    return Object.entries(presetModules).map(([path, content]) => {
-      const name = path.split('/').pop() || 'Unknown.txt';
-      return { name, content: content as string };
-    });
-  }, []);
  
   useEffect(() => {
     navigator.permissions.query({ name: 'microphone' as any }).then(result => {
       setMicPermission(result.state as any);
       result.onchange = () => setMicPermission(result.state as any);
     });
+  }, []);
+
+  useEffect(() => {
+    const loadDocuments = async () => {
+      const apiBase = import.meta.env.VITE_API_BASE_URL;
+      if (!apiBase) {
+        setDocumentsError('Missing VITE_API_BASE_URL');
+        setLoadingDocuments(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`${apiBase}/api/documents`);
+        if (!response.ok) {
+          throw new Error(`Failed to load documents: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const docs = (data.documents || []) as DocumentSummary[];
+        setDocuments(docs);
+        if (docs.length > 0 && !selectedDocumentId) {
+          setSelectedDocumentId(docs[0].id);
+        }
+      } catch (err) {
+        console.error(err);
+        setDocumentsError('Failed to load documents.');
+      } finally {
+        setLoadingDocuments(false);
+      }
+    };
+
+    loadDocuments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
  
   const requestMic = async () => {
@@ -48,39 +74,56 @@ const SetupForm: React.FC<SetupFormProps> = ({ onStart }) => {
  
     setLoading(true);
     try {
-      let text = '';
-      let fileName = '';
+      const apiBase = import.meta.env.VITE_API_BASE_URL;
+      if (!apiBase) {
+        throw new Error('Missing VITE_API_BASE_URL');
+      }
+
+      let documentId = selectedDocumentId;
 
       if (file) {
-        text = await readFileAsText(file);
-        fileName = file.name;
-      } else {
-        // If no file uploaded, use selected preset or default to first preset
-        let preset = null;
+        const formData = new FormData();
+        formData.append('file', file);
+        const uploadResponse = await fetch(`${apiBase}/api/documents/upload`, {
+          method: 'POST',
+          body: formData,
+        });
 
-        if (selectedPreset) {
-          preset = presetFiles.find(p => p.name === selectedPreset);
+        if (!uploadResponse.ok) {
+          throw new Error(`Upload failed: ${uploadResponse.status}`);
         }
 
-        // If no preset selected, use first document as default
-        if (!preset && presetFiles.length > 0) {
-          preset = presetFiles[0];
-        }
-
-        if (!preset) {
-          alert('No documents available.');
-          setLoading(false);
-          return;
-        }
-
-        text = preset.content || '';
-        fileName = preset.name || '';
+        const uploadData = await uploadResponse.json();
+        documentId = uploadData.document?.id || '';
       }
+
+      if (!documentId) {
+        alert('No documents available.');
+        setLoading(false);
+        return;
+      }
+
+      const sessionResponse = await fetch(`${apiBase}/api/session/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          role,
+          documentId,
+        }),
+      });
+
+      if (!sessionResponse.ok) {
+        throw new Error(`Session start failed: ${sessionResponse.status}`);
+      }
+
+      const sessionData = await sessionResponse.json();
+      const document = sessionData.document as DocumentSummary;
 
       onStart({
         role,
-        contextText: text,
-        fileName: fileName
+        sessionId: sessionData.sessionId,
+        documentId: document.id,
+        documentName: document.name,
       });
 
     } catch (err) {
@@ -124,7 +167,15 @@ const SetupForm: React.FC<SetupFormProps> = ({ onStart }) => {
         <div className="space-y-4">
           <label className="block text-sm font-bold text-slate-700 uppercase tracking-wider">Document Upload</label>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {presetFiles.length === 0 ? (
+            {loadingDocuments ? (
+              <div className="col-span-1 md:col-span-2 text-sm text-slate-500 bg-slate-50 border border-slate-100 rounded-2xl p-4">
+                Loading documents...
+              </div>
+            ) : documentsError ? (
+              <div className="col-span-1 md:col-span-2 text-sm text-red-500 bg-red-50 border border-red-100 rounded-2xl p-4">
+                {documentsError}
+              </div>
+            ) : documents.length === 0 ? (
               <div className="col-span-1 md:col-span-2 text-sm text-slate-500 bg-slate-50 border border-slate-100 rounded-2xl p-4">
                 Add txt file here.
               </div>
@@ -144,7 +195,7 @@ const SetupForm: React.FC<SetupFormProps> = ({ onStart }) => {
               <input
                 type="file"
                 accept=".pdf,.txt"
-                onChange={(e) => { setFile(e.target.files?.[0] || null); setSelectedPreset(null); }}
+                onChange={(e) => { setFile(e.target.files?.[0] || null); setSelectedDocumentId(''); }}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
               <div className={`p-4 rounded-2xl border-2 border-dashed transition-all flex items-center gap-3 ${
@@ -160,6 +211,27 @@ const SetupForm: React.FC<SetupFormProps> = ({ onStart }) => {
                 </span>
               </div>
             </div>
+
+            {documents.length > 0 && (
+              <div className="col-span-1 md:col-span-2 space-y-2">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Preset Document</label>
+                <select
+                  value={selectedDocumentId}
+                  onChange={(e) => setSelectedDocumentId(e.target.value)}
+                  disabled={!!file}
+                  className="w-full px-4 py-3 rounded-2xl border-2 border-slate-100 focus:border-indigo-500 focus:ring-0 outline-none transition-all text-sm font-medium disabled:bg-slate-50"
+                >
+                  {documents.map((doc) => (
+                    <option key={doc.id} value={doc.id}>
+                      {doc.name}
+                    </option>
+                  ))}
+                </select>
+                {file && (
+                  <p className="text-xs text-slate-400">Uploaded file will be used instead of preset.</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
  

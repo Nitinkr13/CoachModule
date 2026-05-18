@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.router import router as api_router
+from app.env import load_env
 from websocket.router import router as websocket_router
 
 
@@ -17,6 +18,8 @@ def _get_cors_origins() -> list[str]:
         "http://127.0.0.1:3000",
     ]
 
+
+load_env()
 
 app = FastAPI(title="CoachModule API", version="0.1.0")
 

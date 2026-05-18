@@ -15,12 +15,6 @@ const EvaluationView: React.FC<EvaluationViewProps> = ({ history, config, onRese
 
   useEffect(() => {
     const generateFeedback = async () => {
-      if (history.length === 0) {
-        setFeedbackHtml("<p>No conversation data available for evaluation.</p>");
-        setLoading(false);
-        return;
-      }
-
       try {
         const apiBase = import.meta.env.VITE_API_BASE_URL;
         if (!apiBase) {
@@ -31,12 +25,7 @@ const EvaluationView: React.FC<EvaluationViewProps> = ({ history, config, onRese
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            role: config.role,
-            fileName: config.fileName,
-            history: history.map(item => ({
-              speaker: item.speaker,
-              text: item.text,
-            })),
+            sessionId: config.sessionId,
           }),
         });
 

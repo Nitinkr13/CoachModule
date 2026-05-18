@@ -107,23 +107,6 @@ const LiveConversation: React.FC<LiveConversationProps> = ({ config, onEnd }) =>
 
     setIsActive(true);
 
-    const systemInstruction = `
-      CRITICAL: You are NOT an AI assistant. You are strictly inhabiting the character of a customer looking to buy a insurance policy, : ${config.role}.
-      STAY IN CHARACTER AT ALL TIMES. Use the persona's vocabulary, attitude, and tone.
-
-      Your goal is to interact with the user based on this document context:
-      ---
-      ${config.contextText}
-      ---
-
-      Rules:
-      1. Stay strictly as ${config.role}.
-      2. Ask exactly one question or give one response at a time.
-      3. Listen to the user's answer and react exactly as ${config.role} would.
-      4. If the user asks for feedback, only give it if it fits the character.
-      5. Do not explain that you are an AI. Do not be overly polite if the character isn't.
-    `;
-
     const wsUrl = import.meta.env.VITE_WS_URL;
     if (!wsUrl) {
       console.error('Missing VITE_WS_URL env var');
@@ -178,10 +161,7 @@ const LiveConversation: React.FC<LiveConversationProps> = ({ config, onEnd }) =>
       const configMessage = {
         type: 'config',
         payload: {
-          model: 'gemini-2.5-flash-native-audio-preview-12-2025',
-          voiceName: 'Kore',
-          responseModalities: ['AUDIO'],
-          systemInstruction,
+          sessionId: config.sessionId,
         },
       };
 

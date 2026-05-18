@@ -7,3 +7,7 @@ def build_system_prompt(persona: dict, scenario: dict, template: str) -> str:
         f"Persona: {persona_name}\n"
         f"Scenario: {scenario_name}\n"
     )
+
+
+def build_live_system_prompt(role: str, context_text: str, template: str) -> str:
+    return template.format(role=role, context=context_text).strip()

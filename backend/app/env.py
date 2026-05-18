@@ -26,7 +26,6 @@ def load_env() -> None:
     candidates = [
         root / ".env",
         root / ".env.local",
-        root.parent / "frontend" / ".env.local",
     ]
 
     for path in candidates:
