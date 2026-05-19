@@ -24,7 +24,8 @@ const LiveConversation: React.FC<LiveConversationProps> = ({ config, onEnd }) =>
   const nextStartTimeRef = useRef<number>(0);
   const streamRef = useRef<MediaStream | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const workletRef = useRef<AudioWorkletNode | null>(null);
+  const silentGainRef = useRef<GainNode | null>(null);
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const wsReadyRef = useRef(false);
 
@@ -43,7 +44,11 @@ const LiveConversation: React.FC<LiveConversationProps> = ({ config, onEnd }) =>
   }, []);
 
   const initializeAudio = async () => {
-    audioContextInRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+    const inputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+    audioContextInRef.current = inputCtx;
+    await inputCtx.audioWorklet.addModule(
+      new URL('../utils/audioWorkletProcessor.ts', import.meta.url)
+    );
     audioContextOutRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
     streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
     streamRef.current.getAudioTracks().forEach(track => {
@@ -76,9 +81,13 @@ const LiveConversation: React.FC<LiveConversationProps> = ({ config, onEnd }) =>
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
     }
-    if (processorRef.current) {
-      processorRef.current.disconnect();
-      processorRef.current = null;
+    if (workletRef.current) {
+      workletRef.current.disconnect();
+      workletRef.current = null;
+    }
+    if (silentGainRef.current) {
+      silentGainRef.current.disconnect();
+      silentGainRef.current = null;
     }
     if (sourceRef.current) {
       sourceRef.current.disconnect();
@@ -117,25 +126,38 @@ const LiveConversation: React.FC<LiveConversationProps> = ({ config, onEnd }) =>
     wsRef.current = ws;
 
     const startAudioStream = () => {
-      if (processorRef.current || !streamRef.current) {
+      if (workletRef.current || !streamRef.current || !audioContextInRef.current) {
         return;
       }
 
       const source = audioContextInRef.current!.createMediaStreamSource(streamRef.current);
       sourceRef.current = source;
-      const scriptProcessor = audioContextInRef.current!.createScriptProcessor(4096, 1, 1);
-      processorRef.current = scriptProcessor;
+      const worklet = new AudioWorkletNode(audioContextInRef.current!, 'pcm-capture', {
+        numberOfInputs: 1,
+        numberOfOutputs: 1,
+        channelCount: 1,
+      });
+      workletRef.current = worklet;
 
-      scriptProcessor.onaudioprocess = (e) => {
+      const silentGain = audioContextInRef.current!.createGain();
+      silentGain.gain.value = 0;
+      silentGainRef.current = silentGain;
+
+      worklet.port.onmessage = (event) => {
         if (!isMicOnRef.current || ws.readyState !== WebSocket.OPEN) {
           return;
         }
 
-        const inputData = e.inputBuffer.getChannelData(0);
+        const inputData = event.data;
+        if (!(inputData instanceof Float32Array)) {
+          return;
+        }
+
         const l = inputData.length;
         const int16 = new Int16Array(l);
         for (let i = 0; i < l; i++) {
-          int16[i] = inputData[i] * 32768;
+          const sample = Math.max(-1, Math.min(1, inputData[i]));
+          int16[i] = sample * 32768;
         }
         const audioPayload = {
           type: 'audio',
@@ -148,8 +170,8 @@ const LiveConversation: React.FC<LiveConversationProps> = ({ config, onEnd }) =>
         ws.send(JSON.stringify(audioPayload));
       };
 
-      source.connect(scriptProcessor);
-      scriptProcessor.connect(audioContextInRef.current!.destination);
+      source.connect(worklet);
+      worklet.connect(silentGain).connect(audioContextInRef.current!.destination);
     };
 
     ws.onopen = () => {

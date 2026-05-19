@@ -1,9 +1,0 @@
-{
-  "id": "cm_rm_training",
-  "name": "Cluster Manager coaching a Regional Manager",
-  "goal": "Coach the RM to align with branch routines while sustaining performance.",
-  "context": "You are a Cluster Manager (CM) conducting a coaching conversation with a Regional Manager (RM). The CM should balance performance recognition with discipline, alignment, and long-term branch trust.",
-  "evaluation_id": "cm_rm_default",
-  "template_id": "live_session",
-  "is_default": true
-}
