@@ -13,6 +13,7 @@ class PersonaConfig:
     description: str
     behavior: str
     cm_treatment: str
+    evaluation_framework: str
     impact: str
 
 
@@ -87,6 +88,7 @@ def _load_personas() -> Dict[str, PersonaConfig]:
             description=str(raw.get("description", "")).strip(),
             behavior=str(raw.get("behavior", "")).strip(),
             cm_treatment=str(raw.get("cm_treatment", "")).strip(),
+            evaluation_framework=str(raw.get("evaluation_framework", "")).strip(),
             impact=str(raw.get("impact", "")).strip(),
         )
 

@@ -1,6 +1,12 @@
 
 import React, { useEffect, useState } from 'react';
-import { EvaluationRubricItem, TranscriptionItem, TrainingSessionConfig } from '../types';
+import {
+  EvaluationReport,
+  EvaluationReportSection,
+  EvaluationRubricItem,
+  TranscriptionItem,
+  TrainingSessionConfig
+} from '../types';
 import { marked } from 'marked';
 
 interface EvaluationViewProps {
@@ -10,7 +16,9 @@ interface EvaluationViewProps {
 }
 
 const EvaluationView: React.FC<EvaluationViewProps> = ({ history, config, onReset }) => {
-  const [feedbackHtml, setFeedbackHtml] = useState<string>('');
+  const [report, setReport] = useState<EvaluationReport | null>(null);
+  const [impactFeedback, setImpactFeedback] = useState<string>('');
+  const [fallbackHtml, setFallbackHtml] = useState<string>('');
   const [rubric, setRubric] = useState<EvaluationRubricItem[]>([]);
   const [overallScore, setOverallScore] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,16 +44,22 @@ const EvaluationView: React.FC<EvaluationViewProps> = ({ history, config, onRese
         }
 
         const data = await response.json();
-        const rawText = data.feedback || "Failed to generate feedback.";
+        const reportData = (data.report || null) as EvaluationReport | null;
+        const feedbackText = typeof data.feedback === 'string' ? data.feedback : '';
+        const reportMarkdown = typeof data.reportMarkdown === 'string' ? data.reportMarkdown : '';
         const rubricItems = (data.rubric || []) as EvaluationRubricItem[];
         const scoreValue = typeof data.score === 'number' ? data.score : null;
-        const html = await marked.parse(rawText);
-        setFeedbackHtml(html);
+        const fallbackText = reportMarkdown || feedbackText || "Failed to generate feedback.";
+        const html = await marked.parse(fallbackText);
+
+        setReport(reportData);
+        setImpactFeedback(feedbackText);
+        setFallbackHtml(html);
         setRubric(rubricItems);
         setOverallScore(scoreValue);
       } catch (err) {
         console.error(err);
-        setFeedbackHtml("<p>Error generating feedback. Please check your connection.</p>");
+        setFallbackHtml("<p>Error generating feedback. Please check your connection.</p>");
       } finally {
         setLoading(false);
       }
@@ -54,6 +68,81 @@ const EvaluationView: React.FC<EvaluationViewProps> = ({ history, config, onRese
     generateFeedback();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const reportTemplate = report?.evaluation_report_template;
+
+  const renderSectionDetails = (section: EvaluationReportSection) => {
+    return (
+      <div className="space-y-4">
+        {section.criteria && section.criteria.length > 0 && (
+          <div>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Criteria</p>
+            <ul className="list-disc list-inside text-sm text-slate-600 mt-2 space-y-1">
+              {section.criteria.map((item, idx) => (
+                <li key={`${section.observation_area}-criteria-${idx}`}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {section.sub_sections && section.sub_sections.length > 0 && (
+          <div className="space-y-4">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Structured approach</p>
+            {section.sub_sections.map((sub, idx) => (
+              <div key={`${section.observation_area}-sub-${idx}`} className="p-4 rounded-2xl border border-slate-100 bg-slate-50">
+                <p className="text-sm font-bold text-slate-800">{sub.framework}</p>
+                <p className="text-xs text-slate-500 mt-1">{sub.criteria}</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                  <div>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">What went well</p>
+                    <p className="text-sm text-slate-700 mt-1">{sub.what_went_well || ' '}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">What could have been better</p>
+                    <p className="text-sm text-slate-700 mt-1">{sub.what_could_have_been_better || ' '}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {(section.what_went_well || section.what_could_have_been_better) && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">What went well</p>
+              <p className="text-sm text-slate-700 mt-1">{section.what_went_well || ' '}</p>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">What could have been better</p>
+              <p className="text-sm text-slate-700 mt-1">{section.what_could_have_been_better || ' '}</p>
+            </div>
+          </div>
+        )}
+
+        {section.comments && (
+          <div>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Comments</p>
+            <p className="text-sm text-slate-700 mt-1">{section.comments}</p>
+          </div>
+        )}
+
+        {section.overall_comments && (
+          <div>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Overall comments</p>
+            <p className="text-sm text-slate-700 mt-1">{section.overall_comments}</p>
+          </div>
+        )}
+
+        {section.rating !== null && section.rating !== undefined && (
+          <div>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Rating</p>
+            <p className="text-sm text-slate-700 mt-1">{section.rating}</p>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="max-w-4xl mx-auto p-10 bg-white rounded-3xl shadow-2xl border border-slate-100">
@@ -109,10 +198,60 @@ const EvaluationView: React.FC<EvaluationViewProps> = ({ history, config, onRese
             ))}
           </div>
 
-          <div 
-            className="prose prose-slate max-w-none prose-headings:text-slate-900 prose-strong:text-indigo-600"
-            dangerouslySetInnerHTML={{ __html: feedbackHtml }}
-          />
+          <div className="p-6 rounded-2xl border border-slate-100 bg-slate-50">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Impact-based feedback</p>
+            <p className="text-base text-slate-800 mt-2">{impactFeedback || ' '}</p>
+          </div>
+
+          {reportTemplate ? (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-2xl font-bold text-slate-900">{reportTemplate.title}</h3>
+              </div>
+              {reportTemplate.sections.map((section, idx) => (
+                <div key={`${section.observation_area}-${idx}`} className="p-6 rounded-3xl border border-slate-100 bg-white shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-lg font-bold text-slate-800">{section.observation_area}</h4>
+                    {section.rating !== null && section.rating !== undefined && (
+                      <span className="text-sm font-semibold text-slate-500">Rating: {section.rating}</span>
+                    )}
+                  </div>
+                  <div className="mt-4">
+                    {renderSectionDetails(section)}
+                  </div>
+                </div>
+              ))}
+
+              <div className="p-6 rounded-3xl border border-slate-100 bg-slate-50">
+                <h4 className="text-lg font-bold text-slate-800">Overall summary</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Strengths</p>
+                    <p className="text-sm text-slate-700 mt-1">{reportTemplate.overall_summary.strengths || ' '}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Development areas</p>
+                    <p className="text-sm text-slate-700 mt-1">{reportTemplate.overall_summary.development_areas || ' '}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Recommended next steps</p>
+                    <p className="text-sm text-slate-700 mt-1">{reportTemplate.overall_summary.recommended_next_steps || ' '}</p>
+                  </div>
+                  {reportTemplate.overall_summary.overall_rating !== null && reportTemplate.overall_summary.overall_rating !== undefined && (
+                    <div>
+                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Overall rating</p>
+                      <p className="text-sm text-slate-700 mt-1">{reportTemplate.overall_summary.overall_rating}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div
+              className="prose prose-slate max-w-none prose-headings:text-slate-900 prose-strong:text-indigo-600"
+              dangerouslySetInnerHTML={{ __html: fallbackHtml }}
+            />
+          )}
         </div>
       )}
 

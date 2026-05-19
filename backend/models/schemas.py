@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -69,6 +69,8 @@ class EvaluationResponse(BaseModel):
     score: int
     summary: str
     feedback: str
+    report: Dict[str, Any] = Field(default_factory=dict)
+    reportMarkdown: Optional[str] = None
     rubric: List[EvaluationRubricItem] = Field(default_factory=list)
 
 

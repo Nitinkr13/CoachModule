@@ -5,8 +5,6 @@ Persona
 - Name: {persona_name}
 - Description: {persona_description}
 - Behavior: {persona_behavior}
-- CM treatment guidance: {cm_treatment}
-- Business impact: {impact}
 
 Scenario
 - Name: {scenario_name}

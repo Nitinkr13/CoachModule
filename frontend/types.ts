@@ -46,3 +46,38 @@ export interface EvaluationRubricItem {
   score: number;
   notes: string;
 }
+
+export interface EvaluationReportSubSection {
+  framework: string;
+  criteria: string;
+  what_went_well: string;
+  what_could_have_been_better: string;
+}
+
+export interface EvaluationReportSection {
+  observation_area: string;
+  criteria?: string[];
+  sub_sections?: EvaluationReportSubSection[];
+  what_went_well?: string;
+  what_could_have_been_better?: string;
+  rating?: number | null;
+  comments?: string;
+  overall_comments?: string;
+}
+
+export interface EvaluationReportOverallSummary {
+  strengths: string;
+  development_areas: string;
+  recommended_next_steps: string;
+  overall_rating: number | null;
+}
+
+export interface EvaluationReportTemplate {
+  title: string;
+  sections: EvaluationReportSection[];
+  overall_summary: EvaluationReportOverallSummary;
+}
+
+export interface EvaluationReport {
+  evaluation_report_template: EvaluationReportTemplate;
+}

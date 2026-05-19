@@ -177,7 +177,9 @@ def evaluation(payload: EvaluationRequest) -> EvaluationResponse:
     return EvaluationResponse(
         score=result.score,
         summary=result.summary,
-        feedback=result.report_markdown,
+        feedback=result.feedback,
+        report=result.report,
+        reportMarkdown=result.report_markdown,
         rubric=[
             EvaluationRubricItem(
                 id=item.id,

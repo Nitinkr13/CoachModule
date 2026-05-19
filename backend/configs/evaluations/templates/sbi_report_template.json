@@ -1,0 +1,68 @@
+{
+  "evaluation_report_template": {
+    "title": "Coaching Conversation Evaluation Report",
+    "sections": [
+      {
+        "observation_area": "Setting the context",
+        "criteria": [
+          "Created a conducive environment for the feedback conversation",
+          "Person was informed of the intent to share feedback",
+          "Prepared with specific instances and observable behaviours"
+        ],
+        "what_went_well": "",
+        "what_could_have_been_better": "",
+        "rating": null,
+        "comments": ""
+      },
+      {
+        "observation_area": "Used structured conversation approach",
+        "sub_sections": [
+          {
+            "framework": "Situation (S)",
+            "criteria": "Situation was specific, sufficient context provided without overloading details",
+            "what_went_well": "",
+            "what_could_have_been_better": ""
+          },
+          {
+            "framework": "Behaviour (B)",
+            "criteria": "Facts and observable behaviours shared, no judgements or generalizations were used",
+            "what_went_well": "",
+            "what_could_have_been_better": ""
+          },
+          {
+            "framework": "Impact (I)",
+            "criteria": "Impact of the behaviour was explored and agreed upon",
+            "what_went_well": "",
+            "what_could_have_been_better": ""
+          },
+          {
+            "framework": "Way Forward (W)",
+            "criteria": "Expectations were clearly articulated and solutions were co-created",
+            "what_went_well": "",
+            "what_could_have_been_better": ""
+          }
+        ],
+        "overall_comments": "",
+        "rating": null
+      },
+      {
+        "observation_area": "Feedback Skills (Overall)",
+        "criteria": [
+          "Had a dialogue rather than a one-way conversation",
+          "Demonstrated active listening and paraphrased understanding",
+          "Handled resistance or emotions well through paraphrasing and empathy"
+        ],
+        "what_went_well": "",
+        "what_could_have_been_better": "",
+        "rating": null,
+        "comments": ""
+      }
+    ],
+    "overall_summary": {
+      "strengths": "",
+      "development_areas": "",
+      "recommended_next_steps": "",
+      "overall_rating": null
+    }
+  }
+}

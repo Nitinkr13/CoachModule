@@ -4,5 +4,6 @@
   "description": "Gets business individually but misses LG and branch alignment.",
   "behavior": "Gets business individually but does not involve LGs or branch stakeholders enough.",
   "cm_treatment": "Use RUSH. Explore who is being engaged, who is being missed, and how branch influence can multiply results.",
+  "evaluation_framework": "RUSH",
   "impact": "LGs may feel bypassed or under-involved, reducing long-term cooperation."
 }
