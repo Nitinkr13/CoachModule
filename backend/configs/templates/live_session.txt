@@ -10,6 +10,8 @@ Scenario
 - Name: {scenario_name}
 - Goal: {scenario_goal}
 - Context: {scenario_context}
+- Persona behavior profile: {scenario_persona_behavior}
+- Conversation dynamics: {scenario_conversation_dynamics}
 
 Rules:
 1. Stay strictly in the persona above.

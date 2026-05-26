@@ -1,12 +1,26 @@
+import json
+
+
 class _SafeFormatDict(dict):
     def __missing__(self, key: str) -> str:
         return ""
 
 
+def _format_value(value: object) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, (dict, list)):
+        try:
+            return json.dumps(value, ensure_ascii=True, indent=2)
+        except TypeError:
+            return str(value)
+    return str(value)
+
+
 def _read_value(source: object, key: str, default: str = "") -> str:
     if isinstance(source, dict):
-        return str(source.get(key, default) or default)
-    return str(getattr(source, key, default) or default)
+        return _format_value(source.get(key, default) or default)
+    return _format_value(getattr(source, key, default) or default)
 
 
 def build_system_prompt(persona: dict, scenario: dict, template: str) -> str:
@@ -34,6 +48,8 @@ def build_simulation_prompt(persona: object, scenario: object, template: str) ->
         scenario_name=_read_value(scenario, "name"),
         scenario_goal=_read_value(scenario, "goal"),
         scenario_context=_read_value(scenario, "context"),
+        scenario_persona_behavior=_read_value(scenario, "persona_behavior"),
+        scenario_conversation_dynamics=_read_value(scenario, "conversation_dynamics"),
     )
 
     return template.format_map(values).strip()

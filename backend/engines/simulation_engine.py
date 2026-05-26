@@ -25,6 +25,8 @@ class ScenarioConfig:
     context: str
     evaluation_id: str
     template_id: str
+    persona_behavior: dict = field(default_factory=dict)
+    conversation_dynamics: dict = field(default_factory=dict)
     is_default: bool = False
 
 
@@ -109,6 +111,8 @@ def _load_scenarios() -> Dict[str, ScenarioConfig]:
             name=_require(str(raw.get("name", "")).strip(), "name", scenario_id),
             goal=str(raw.get("goal", "")).strip(),
             context=str(raw.get("context", "")).strip(),
+            persona_behavior=raw.get("persona_behavior") or {},
+            conversation_dynamics=raw.get("conversation_dynamics") or {},
             evaluation_id=str(raw.get("evaluation_id", "")).strip(),
             template_id=str(raw.get("template_id", "")).strip() or "live_session",
             is_default=bool(raw.get("is_default", False)),

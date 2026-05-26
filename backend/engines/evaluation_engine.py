@@ -102,6 +102,8 @@ def _build_prompt(
         f"Scenario name: {scenario.name}\n"
         f"Scenario goal: {scenario.goal}\n"
         f"Scenario context: {scenario.context}\n\n"
+        f"Scenario persona behavior: {json.dumps(scenario.persona_behavior, ensure_ascii=True)}\n"
+        f"Scenario conversation dynamics: {json.dumps(scenario.conversation_dynamics, ensure_ascii=True)}\n\n"
         "Evaluation scale:\n"
         f"- Min: {evaluation.scale.min}\n"
         f"- Max: {evaluation.scale.max}\n"
