@@ -1,0 +1,9 @@
+{
+  "id": "rm_inconsistent_performer",
+  "name": "Inconsistent performer",
+  "description": "Performs well in some weeks/months but drops activity or conversions suddenly.",
+  "behavior": "Shows periods of strong performance followed by sudden decline in activity or conversion consistency.",
+  "cm_treatment": "Use RUSH. Identify whether the gap is planning, follow-up, confidence, product clarity, or branch rhythm.",
+  "evaluation_framework": "RUSH",
+  "impact": "Pipeline and conversion become unstable, affecting monthly predictability. Branch may not know when to rely on the RM, reducing trust in execution."
+}

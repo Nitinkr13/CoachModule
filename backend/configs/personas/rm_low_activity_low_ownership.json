@@ -1,0 +1,9 @@
+{
+    "id": "rm_low_activity_low_ownership",
+    "name": "Low activity and low ownership RM",
+    "description": "Poor lead logging, weak branch visits, low follow-up, vague reasons for non-performance.",
+    "behavior": "Shows low visible ownership through weak activity discipline and inconsistent follow-up.",
+    "cm_treatment": "Use SBI + clear tasking. State observed behaviour, impact on business, and give specific    daily/weekly actions with tracking.",
+    "evaluation_framework": "SBI",
+    "impact": "Pipeline gets weak. Branch may stop taking the RM seriously because visible ownership is low."
+}

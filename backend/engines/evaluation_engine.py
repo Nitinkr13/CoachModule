@@ -38,6 +38,7 @@ class EvaluationResult:
 
 _SBI_REPORT_TEMPLATE_NAME = "sbi_report_template"
 _RUSH_REPORT_TEMPLATE_NAME = "rush_report_template"
+_SECTION_WEIGHTS = (0.3, 0.4, 0.3)
 
 
 def _normalize_framework(value: str) -> str:
@@ -120,7 +121,8 @@ def _build_prompt(
         "- rubric: array of {id, label, score, notes}\n"
         "- report: object that matches the report template structure exactly and fills every field\n"
         "- feedback: 2-4 sentence string based only on the Business impact above\n"
-        "Leave every rating/overall_rating field in the report as null.\n"
+        "Populate rating fields for the three main sections (Setting the context, Used structured conversation approach, and Feedback/Conversation Skills) using integer scores within the scale.\n"
+        "Compute overall_summary.overall_rating as a weighted average of those three section ratings using weights 0.3, 0.4, 0.3 (round to nearest integer within the scale).\n"
         "Ensure rubric scores are integers within the scale and include every criterion id listed above."
     )
 
@@ -162,6 +164,74 @@ def _coerce_score(value: object, evaluation: EvaluationConfig) -> int:
     except (TypeError, ValueError):
         score = evaluation.scale.min
     return max(evaluation.scale.min, min(evaluation.scale.max, score))
+
+
+def _coerce_nullable_score(
+    value: object,
+    evaluation: EvaluationConfig,
+) -> Optional[int]:
+    if value is None:
+        return None
+    return _coerce_score(value, evaluation)
+
+
+def _weighted_section_score(
+    section_scores: List[Optional[int]],
+    evaluation: EvaluationConfig,
+) -> Optional[int]:
+    total_weight = 0.0
+    total_score = 0.0
+    for score, weight in zip(section_scores, _SECTION_WEIGHTS):
+        if score is None:
+            continue
+        total_weight += weight
+        total_score += score * weight
+
+    if total_weight == 0:
+        return None
+
+    average = total_score / total_weight
+    return _coerce_score(round(average), evaluation)
+
+
+def _normalize_report_ratings(
+    report: dict,
+    evaluation: EvaluationConfig,
+) -> dict:
+    if not isinstance(report, dict):
+        return report
+
+    template = report.get("evaluation_report_template")
+    if not isinstance(template, dict):
+        return report
+
+    sections = template.get("sections")
+    if not isinstance(sections, list):
+        return report
+
+    section_scores: List[Optional[int]] = []
+    for idx, section in enumerate(sections):
+        if idx >= len(_SECTION_WEIGHTS):
+            break
+        if not isinstance(section, dict):
+            section_scores.append(None)
+            continue
+        rating = _coerce_nullable_score(section.get("rating"), evaluation)
+        if rating is not None:
+            section["rating"] = rating
+        section_scores.append(rating)
+
+    overall = template.get("overall_summary")
+    if isinstance(overall, dict):
+        computed = _weighted_section_score(section_scores, evaluation)
+        if computed is not None:
+            overall["overall_rating"] = computed
+        else:
+            overall_rating = _coerce_nullable_score(overall.get("overall_rating"), evaluation)
+            if overall_rating is not None:
+                overall["overall_rating"] = overall_rating
+
+    return report
 
 
 def _default_rubric(evaluation: EvaluationConfig) -> List[EvaluationRubricItem]:
@@ -279,6 +349,8 @@ def evaluate_session(
             report = {"evaluation_report_template": report}
         else:
             report = _report_template(framework)
+
+    report = _normalize_report_ratings(report, evaluation)
 
     feedback = str(data.get("feedback", "")).strip()
     if not feedback:

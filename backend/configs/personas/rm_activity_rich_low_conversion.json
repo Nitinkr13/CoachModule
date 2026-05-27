@@ -1,0 +1,9 @@
+{
+  "id": "rm_activity_rich_low_conversion",
+  "name": "Activity-rich but low-conversion RM",
+  "description": "Meets LGs, logs leads, does calling, but closures remain weak.",
+  "behavior": "Maintains high visible activity levels but struggles to convert leads into closures.",
+  "cm_treatment": "Use RUSH. Diagnose quality of need analysis, pitch, objection handling, and follow-up.",
+  "evaluation_framework": "RUSH",
+  "impact": "RM may feel frustrated because effort is high but results are low. Branch trust may get impacted because branch referrals and LG leads are not fully activated."
+} 

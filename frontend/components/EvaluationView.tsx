@@ -239,7 +239,7 @@ const EvaluationView: React.FC<EvaluationViewProps> = ({ history, config, onRese
                   </div>
                   {reportTemplate.overall_summary.overall_rating !== null && reportTemplate.overall_summary.overall_rating !== undefined && (
                     <div>
-                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Overall rating</p>
+                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Final score</p>
                       <p className="text-sm text-slate-700 mt-1">{reportTemplate.overall_summary.overall_rating}</p>
                     </div>
                   )}

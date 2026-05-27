@@ -1,0 +1,9 @@
+{
+  "id": "rm_defensive",
+  "name": "Defensive RM",
+  "description": "Pushes blame to branch, LGs, market, product, customer, or process.",
+  "behavior": "Responds to performance gaps by externalizing responsibility instead of focusing on controllable actions.",
+  "cm_treatment": "Use RUSH. Ask about past and current activity with branch staff, discuss controllable vs uncontrollable actions, and drive ownership with actions.",
+  "evaluation_framework": "RUSH",
+  "impact": "LGs and branch team may see the RM as someone who complains but does not influence."
+}  

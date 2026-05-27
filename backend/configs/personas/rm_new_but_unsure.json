@@ -1,0 +1,9 @@
+{
+  "id": "rm_new_but_unsure",
+  "name": "New RM trying but unsure",
+  "description": "Makes effort but lacks confidence, structure, or ability to move from rapport to need analysis.",
+  "behavior": "Shows willingness and effort but struggles with structured customer conversations and conversion flow.",
+  "cm_treatment": "Use SBI + enabling approach. Give tools, scripts, joint-call support, and small achievable tasks. Avoid heavy criticism.",
+  "evaluation_framework": "SBI",
+  "impact": "LGs may support the RM if they see effort and CM-backed preparation."
+}
