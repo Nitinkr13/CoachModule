@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { TrainingSessionConfig, TranscriptionItem } from '../types';
 import { encode, decode, decodeAudioData } from '../utils/audio';
+import workletUrl from '../utils/audioWorkletProcessor?url';
 
 interface LiveConversationProps {
   config: TrainingSessionConfig;
@@ -46,9 +47,7 @@ const LiveConversation: React.FC<LiveConversationProps> = ({ config, onEnd }) =>
   const initializeAudio = async () => {
     const inputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
     audioContextInRef.current = inputCtx;
-    await inputCtx.audioWorklet.addModule(
-      new URL('../utils/audioWorkletProcessor.ts', import.meta.url)
-    );
+    await inputCtx.audioWorklet.addModule(workletUrl);
     audioContextOutRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
     streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
     streamRef.current.getAudioTracks().forEach(track => {
