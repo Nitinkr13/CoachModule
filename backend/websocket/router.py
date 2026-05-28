@@ -51,7 +51,7 @@ def _build_gemini_config(payload: dict, system_instruction: str) -> dict:
     response_modalities = payload.get("responseModalities") or ["AUDIO"]
 
     voice_name = payload.get("voiceName", "Kore")
-    language_code = payload.get("languageCode", "en-US")
+    language_code = payload.get("languageCode", "en-IN")
 
     config: dict[str, Any] = {
         "model": f"models/{model}",
