@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { TrainingSessionConfig, TranscriptionItem } from '../types';
 import { encode, decode, decodeAudioData } from '../utils/audio';
-import workletUrl from '../utils/audioWorkletProcessor?url';
+import workletUrl from '../utils/audioWorkletProcessor.js?url';
 
 interface LiveConversationProps {
   config: TrainingSessionConfig;
