@@ -1,8 +1,11 @@
 from dataclasses import dataclass
 import copy
 import json
+import logging
 import os
+import random
 import re
+import time
 from typing import List, Optional
 
 import requests
@@ -39,6 +42,14 @@ class EvaluationResult:
 _SBI_REPORT_TEMPLATE_NAME = "sbi_report_template"
 _RUSH_REPORT_TEMPLATE_NAME = "rush_report_template"
 _SECTION_WEIGHTS = (0.3, 0.4, 0.3)
+_DEFAULT_CONNECT_TIMEOUT_SEC = 10.0
+_DEFAULT_READ_TIMEOUT_SEC = 180.0
+_DEFAULT_MAX_RETRIES = 2
+_DEFAULT_RETRY_BASE_DELAY_SEC = 1.0
+_DEFAULT_RETRY_MAX_DELAY_SEC = 8.0
+_DEFAULT_FALLBACK_MODEL = "gemini-2.5-flash"
+
+logger = logging.getLogger(__name__)
 
 
 def _normalize_framework(value: str) -> str:
@@ -293,6 +304,96 @@ def _compute_overall(
     return _coerce_score(round(average), evaluation)
 
 
+def _get_int_env(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None or raw == "":
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        return default
+
+
+def _get_float_env(name: str, default: float) -> float:
+    raw = os.getenv(name)
+    if raw is None or raw == "":
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        return default
+
+
+def _retry_delay(
+    attempt: int,
+    base_delay: float,
+    max_delay: float,
+) -> float:
+    jitter = random.random() * 0.25 * base_delay
+    delay = base_delay * (2 ** attempt) + jitter
+    return min(delay, max_delay)
+
+
+def _should_retry_status(status_code: int) -> bool:
+    return status_code in {408, 429, 500, 502, 503, 504}
+
+
+def _post_with_retry(
+    primary_url: str,
+    fallback_url: Optional[str],
+    payload: dict,
+    timeout: tuple[float, float],
+    max_retries: int,
+    base_delay: float,
+    max_delay: float,
+) -> requests.Response:
+    last_exc: Exception | None = None
+    for attempt in range(max_retries + 1):
+        try:
+            if attempt == 0 or not fallback_url:
+                url = primary_url
+            else:
+                url = fallback_url
+            response = requests.post(url, json=payload, timeout=timeout)
+            if response.ok or not _should_retry_status(response.status_code):
+                return response
+            last_exc = RuntimeError(
+                f"Gemini evaluation failed: {response.status_code} {response.text}"
+            )
+        except requests.exceptions.RequestException as exc:
+            last_exc = exc
+
+        if attempt < max_retries:
+            delay = _retry_delay(attempt, base_delay, max_delay)
+            logger.warning(
+                "Gemini evaluation attempt %s failed; retrying in %.2fs",
+                attempt + 1,
+                delay,
+            )
+            time.sleep(delay)
+
+    if last_exc is not None:
+        raise last_exc
+    raise RuntimeError("Gemini evaluation failed with unknown error.")
+
+
+def _fallback_evaluation(
+    persona: PersonaConfig,
+    evaluation: EvaluationConfig,
+    framework: str,
+    message: str,
+) -> EvaluationResult:
+    feedback = persona.impact.strip() or "No impact details available."
+    return EvaluationResult(
+        score=evaluation.scale.min,
+        summary=message,
+        feedback=feedback,
+        report=_report_template(framework),
+        report_markdown=message,
+        rubric=_default_rubric(evaluation),
+    )
+
+
 def evaluate_session(
     persona: PersonaConfig,
     scenario: ScenarioConfig,
@@ -316,23 +417,64 @@ def evaluate_session(
         raise RuntimeError("Missing GEMINI_API_KEY on server.")
 
     model = os.getenv("GEMINI_EVAL_MODEL", "gemini-3-flash-preview")
+    fallback_model = os.getenv("GEMINI_EVAL_FALLBACK_MODEL", _DEFAULT_FALLBACK_MODEL)
+    connect_timeout = _get_float_env(
+        "GEMINI_CONNECT_TIMEOUT_SEC",
+        _DEFAULT_CONNECT_TIMEOUT_SEC,
+    )
+    read_timeout = _get_float_env(
+        "GEMINI_READ_TIMEOUT_SEC",
+        _DEFAULT_READ_TIMEOUT_SEC,
+    )
+    max_retries = _get_int_env("GEMINI_MAX_RETRIES", _DEFAULT_MAX_RETRIES)
+    retry_base_delay = _get_float_env(
+        "GEMINI_RETRY_BASE_DELAY_SEC",
+        _DEFAULT_RETRY_BASE_DELAY_SEC,
+    )
+    retry_max_delay = _get_float_env(
+        "GEMINI_RETRY_MAX_DELAY_SEC",
+        _DEFAULT_RETRY_MAX_DELAY_SEC,
+    )
     url = (
         "https://generativelanguage.googleapis.com/v1beta/models/"
         f"{model}:generateContent?key={api_key}"
     )
+    fallback_url = None
+    if fallback_model:
+        fallback_url = (
+            "https://generativelanguage.googleapis.com/v1beta/models/"
+            f"{fallback_model}:generateContent?key={api_key}"
+        )
     framework = _select_framework(persona)
     prompt = _build_prompt(persona, scenario, evaluation, history, framework)
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
 
-    response = requests.post(url, json=payload, timeout=60)
-    if not response.ok:
-        raise RuntimeError(
-            f"Gemini evaluation failed: {response.status_code} {response.text}"
+    try:
+        response = _post_with_retry(
+            url,
+            fallback_url,
+            payload,
+            (connect_timeout, read_timeout),
+            max_retries,
+            retry_base_delay,
+            retry_max_delay,
         )
+        if not response.ok:
+            raise RuntimeError(
+                f"Gemini evaluation failed: {response.status_code} {response.text}"
+            )
 
-    raw_text = _extract_report_text(response.json()).strip()
-    if not raw_text:
-        raise RuntimeError("Gemini evaluation returned empty response.")
+        raw_text = _extract_report_text(response.json()).strip()
+        if not raw_text:
+            raise RuntimeError("Gemini evaluation returned empty response.")
+    except Exception as exc:
+        logger.exception("Gemini evaluation failed, returning fallback.")
+        return _fallback_evaluation(
+            persona,
+            evaluation,
+            framework,
+            "Evaluation temporarily unavailable. Please retry.",
+        )
 
     data = _extract_json_block(raw_text) or {}
     rubric = _normalize_rubric(data, evaluation)
